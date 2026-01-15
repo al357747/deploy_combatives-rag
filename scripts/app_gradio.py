@@ -1,7 +1,29 @@
-
-
+import os
+import requests
 import gradio as gr
-from rag_core import answer_question
+
+API_BASE = os.environ.get("API_BASE")
+if not API_BASE:
+    raise RuntimeError("Missing required env var API_BASE (e.g., https://deploy-combatives-rag.onrender.com)")
+
+def ask_api(question, top_k, discipline, show_sources, temperature):
+    payload = {
+        "question": question,
+        "top_k": top_k,
+        "discipline_filter": discipline,
+        "show_sources": show_sources,
+        "temperature": temperature,
+    }
+
+    r = requests.post(
+        f"{API_BASE}/query",
+        json=payload,
+        timeout=60,
+    )
+    r.raise_for_status()
+    data = r.json()
+
+    return data.get("answer", ""), data.get("sources", "")
 
 with gr.Blocks(title="Combatives RAG") as demo:
     gr.Markdown("# Combatives RAG\nAsk questions over your Muay Thai / Jiu Jitsu notes.")
@@ -29,10 +51,11 @@ with gr.Blocks(title="Combatives RAG") as demo:
     sources_box = gr.Textbox(label="Sources (retrieval)", lines=6)
 
     run_btn.click(
-        fn=answer_question,
+        fn=ask_api,
         inputs=[question, top_k, discipline, show_sources, temperature],
         outputs=[answer, sources_box],
     )
 
 if __name__ == "__main__":
-    demo.launch(server_name="127.0.0.1", server_port=7860)
+    port = int(os.environ.get("PORT", "7860"))
+    demo.launch(server_name="0.0.0.0", server_port=port, show_error=True)
