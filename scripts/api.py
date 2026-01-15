@@ -2,7 +2,8 @@ from typing import Literal, Optional
 from fastapi import FastAPI
 from pydantic import BaseModel, Field
 
-from rag_core import answer_question
+#from rag_core import answer_question
+from scripts.rag_core import answer_question
 
 app = FastAPI()
 
