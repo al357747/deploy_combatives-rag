@@ -4,3 +4,5 @@ __pycache__/
 .env
 vector_db/
 scripts/reference_api.py
+# Reference / scratch scripts (local only)
+scripts/REF_*.py
