@@ -25,7 +25,7 @@ def ask_api(question, top_k, discipline, show_sources, temperature):
 
     return data.get("answer", ""), data.get("sources", "")
 
-with gr.Blocks(title="Al's Muay Thai Class Notes") as demo:
+with gr.Blocks(title="Muay Thai Notes") as demo:
     gr.Markdown("# Combatives RAG\nAsk questions over your Muay Thai / Jiu Jitsu notes.")
 
     with gr.Row():
@@ -35,20 +35,21 @@ with gr.Blocks(title="Al's Muay Thai Class Notes") as demo:
             lines=3,
         )
 
-#    with gr.Row():
-#        discipline = gr.Dropdown(
-#            choices=["all", "muay-thai", "jiu-jitsu"],
-#            value="all",
-#            label="Discipline filter",
-#        )
-#        top_k = gr.Slider(1, 10, value=3, step=1, label="Top-K retrieved chunks")
-#        temperature = gr.Slider(0.0, 1.0, value=0.2, step=0.1, label="Temperature")
-
     run_btn = gr.Button("Ask")
 
     answer = gr.Textbox(label="Answer", lines=12)
 
+    with gr.Row():
+        discipline = gr.Dropdown(
+            choices=["all", "muay-thai", "jiu-jitsu"],
+            value="all",
+            label="Discipline filter",
+        )
+        top_k = gr.Slider(1, 10, value=3, step=1, label="Top-K retrieved chunks")
+        temperature = gr.Slider(0.0, 1.0, value=0.2, step=0.1, label="Temperature")
+
     show_sources = gr.Checkbox(value=True, label="Show retrieval sources")
+
     sources_box = gr.Textbox(label="Sources (retrieval)", lines=6)
 
     run_btn.click(
