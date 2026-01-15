@@ -56,6 +56,27 @@ with gr.Blocks(title="Combatives RAG") as demo:
         outputs=[answer, sources_box],
     )
 
+#if __name__ == "__main__":
+#    port = int(os.environ.get("PORT", "7860"))
+#    demo.launch(server_name="0.0.0.0", server_port=port, show_error=True)
+
 if __name__ == "__main__":
     port = int(os.environ.get("PORT", "7860"))
-    demo.launch(server_name="0.0.0.0", server_port=port, show_error=True)
+
+    # Expect comma-separated users, e.g.:
+    # GRADIO_USERS=alice:pass1,bob:pass2,charlie:pass3
+    users_env = os.environ.get("GRADIO_USERS")
+
+    auth = None
+    if users_env:
+        auth = []
+        for pair in users_env.split(","):
+            user, pwd = pair.split(":", 1)
+            auth.append((user.strip(), pwd.strip()))
+
+    demo.launch(
+        server_name="0.0.0.0",
+        server_port=port,
+        show_error=True,
+        auth=auth,
+    )
