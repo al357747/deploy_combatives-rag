@@ -215,11 +215,19 @@ def upsert_records(collection, client: OpenAI, records: List[ChunkRecord], batch
 def ingest_notes(notes_dir: Optional[str] = None) -> Dict[str, int]:
     """
     Import-safe entrypoint for FastAPI or other callers.
-    Returns basic stats for logging/response.
+    Always returns a stats dict.
     """
     notes_dir = notes_dir or DEFAULT_NOTES_DIR
-    return main(notes_dir=notes_dir, run_sanity_query=False)
+    stats = main(notes_dir=notes_dir, run_sanity_query=False)
 
+    if stats is None:
+        return {
+            "files_seen": 0,
+            "files_ingested": 0,
+            "chunks_upserted": 0,
+        }
+
+    return stats
 
 
 
@@ -245,7 +253,11 @@ def main(notes_dir: str, run_sanity_query: bool = False) -> Dict[str, int]:
     md_files = sorted(glob.glob(os.path.join(notes_dir, "**", "*.md"), recursive=True))
     if not md_files:
         print(f"No .md files found under: {notes_dir}")
-        return
+        return {
+            "files_seen": 0,
+            "files_ingested": 0,
+            "chunks_upserted": 0,
+        }
 
     for fp in md_files:
         files_seen += 1
@@ -316,7 +328,7 @@ def main(notes_dir: str, run_sanity_query: bool = False) -> Dict[str, int]:
             print(f"\nResult #{i} | source={meta.get('source')} | chunk_index={meta.get('chunk_index')}")
             print(doc[:400], "...")
         return stats
-
+    return stats
 
 if __name__ == "__main__":
     import argparse
