@@ -92,7 +92,7 @@ When disengaging from a clinch, give yourself time to exit by hitting your oppon
 
 ## 18) Dictate center of the ring
 
-## 19) Your opponent don't chase them
+## 19) Cut opponent off (stalk them, don't chase them)
 
 Use tracking to put pressure on them or cut them off to keep in one side of the ring.
 
