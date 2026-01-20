@@ -1,8 +1,5 @@
 # This updates modified docs and ingest new documents
 
-#from dotenv import load_dotenv
-#load_dotenv()
-
 import os
 from dotenv import load_dotenv
 if os.path.exists(".env"):
@@ -214,7 +211,26 @@ def upsert_records(collection, client: OpenAI, records: List[ChunkRecord], batch
     return total
 
 
-def main(notes_dir: str) -> None:
+
+def ingest_notes(notes_dir: Optional[str] = None) -> Dict[str, int]:
+    """
+    Import-safe entrypoint for FastAPI or other callers.
+    Returns basic stats for logging/response.
+    """
+    notes_dir = notes_dir or DEFAULT_NOTES_DIR
+    return main(notes_dir=notes_dir, run_sanity_query=False)
+
+
+
+
+def main(notes_dir: str, run_sanity_query: bool = False) -> Dict[str, int]:
+
+    files_seen = 0
+    files_ingested = 0
+    total_upserted = 0
+
+
+
     if not os.getenv("OPENAI_API_KEY"):
         raise RuntimeError("OPENAI_API_KEY is not set in your environment.")
 
@@ -231,9 +247,9 @@ def main(notes_dir: str) -> None:
         print(f"No .md files found under: {notes_dir}")
         return
 
-    total_inserted = 0
-
     for fp in md_files:
+        files_seen += 1
+
         with open(fp, "r", encoding="utf-8") as f:
             md_text = f.read()
 
@@ -241,9 +257,12 @@ def main(notes_dir: str) -> None:
         if not body.strip():
             continue
 
-        # --- OPTION 2: delete old chunks for this source file ---
+        # delete old chunks for this source file
         source_relpath = os.path.relpath(fp, notes_dir).replace("\\", "/")
         collection.delete(where={"source": source_relpath})
+
+        # we are ingesting this file (it had content)
+        files_ingested += 1
 
         # Build fresh chunks for this file
         records = build_chunk_records(
@@ -255,36 +274,48 @@ def main(notes_dir: str) -> None:
         )
 
         if records:
-            inserted = upsert_records(collection, client, records)
-            total_inserted += inserted
+            upserted = upsert_records(collection, client, records)
+            total_upserted += upserted
 
-    if total_inserted == 0:
+    if total_upserted == 0:
         print("No chunkable content found.")
-        return
+        return {
+            "files_seen": files_seen,
+            "files_ingested": files_ingested,
+            "chunks_upserted": 0,
+        }
 
     print(
-        f"Upserted {total_inserted} chunks into Chroma collection "
-        f"'{COLLECTION_NAME}' at '{PERSIST_DIR}'."
+        f"Ingest complete: files_seen={files_seen}, files_ingested={files_ingested}, "
+        f"chunks_upserted={total_upserted} into collection '{COLLECTION_NAME}' at '{PERSIST_DIR}'."
     )
 
+    stats = {
+        "files_seen": files_seen,
+        "files_ingested": files_ingested,
+        "chunks_upserted": total_upserted,
+    }
 
 
     #print(f"Upserted {inserted} chunks into Chroma collection '{COLLECTION_NAME}' at '{PERSIST_DIR}'.")
 
     # Small sanity query (optional)
-    q = "How do I use teeps to maintain forward pressure?"
-    q_emb = embed_texts(client, [q])[0]
+    if run_sanity_query:
+        # Small sanity query (optional)
+        q = "How do I use teeps to maintain forward pressure?"
+        q_emb = embed_texts(client, [q])[0]
 
-    sample = collection.query(
-        query_embeddings=[q_emb],
-        n_results=3,
-    )
-    
-    print("\nSample query results (top 3):")
-    for i, doc in enumerate(sample["documents"][0], start=1):
-        meta = sample["metadatas"][0][i - 1]
-        print(f"\nResult #{i} | source={meta.get('source')} | chunk_index={meta.get('chunk_index')}")
-        print(doc[:400], "...")
+        sample = collection.query(
+            query_embeddings=[q_emb],
+            n_results=3,
+        )
+
+        print("\nSample query results (top 3):")
+        for i, doc in enumerate(sample["documents"][0], start=1):
+            meta = sample["metadatas"][0][i - 1]
+            print(f"\nResult #{i} | source={meta.get('source')} | chunk_index={meta.get('chunk_index')}")
+            print(doc[:400], "...")
+        return stats
 
 
 if __name__ == "__main__":
@@ -298,4 +329,4 @@ if __name__ == "__main__":
         help="Root folder containing your .md notes (can contain subfolders).",
     )
     args = parser.parse_args()
-    main(args.notes_dir)
+    main(args.notes_dir, run_sanity_query=True)
