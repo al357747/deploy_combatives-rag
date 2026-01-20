@@ -1,9 +1,10 @@
-from typing import Literal, Optional
+from typing import Literal
 from fastapi import FastAPI
 from pydantic import BaseModel, Field
 
-#from rag_core import answer_question
 from scripts.rag_core import answer_question
+from scripts.ingest_notes import ingest_notes
+
 
 app = FastAPI()
 
@@ -21,6 +22,11 @@ class QueryResponse(BaseModel):
 @app.get("/health")
 def health():
     return {"status": "ok"}
+
+@app.post("/admin/ingest")
+def admin_ingest():
+    stats = ingest_notes()
+    return {"status": "ok", **stats}
 
 @app.post("/query", response_model=QueryResponse)
 def query(req: QueryRequest):
